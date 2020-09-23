@@ -1,0 +1,23 @@
+# Default: Let Git decide whether files are text or binary.
+*               text=auto
+
+# Text files: Checkout system line endings (or follow `git config core.eol`)
+*.txt           text
+*.md            text
+*.h             text
+*.cpp           text
+
+
+## Shell scripts: Checkout with Unix line endings.
+*.sh            text    eol=lf
+
+
+## Batch files: Checkout with DOS line endings.
+*.bat           text    eol=crlf
+*.cmd           text    eol=crlf
+
+
+# Binary files: Don't mess with line endings on checkout or checkin.
+*.pdf           binary
+*.png           binary
+*.jpg           binary

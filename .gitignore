@@ -1,0 +1,6 @@
+# Backup and autosave files
+*~
+*.autosave
+
+# Qt Creator
+*.user
