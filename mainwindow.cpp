@@ -108,6 +108,11 @@ void MainWindow::setupViews()
     headerView->setStretchLastSection(true);
 
     setCentralWidget(splitter);
+    delete table;   // Because QTableView generates accessibility events that
+                    // can make it seem like the PieView is accessible even
+                    // when it isn't. We want to be certain that all
+                    // accessibility events originate from the PieView.
+                    // Mainly affects screen readers on Windows.
 }
 
 void MainWindow::openFile()
