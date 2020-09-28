@@ -2,9 +2,11 @@ QT += widgets
 requires(qtConfig(filedialog))
 
 HEADERS     = mainwindow.h \
+              accessiblepieview.h \
               pieview.h
 RESOURCES   = chart.qrc
 SOURCES     = main.cpp \
+              accessiblepieview.cpp \
               mainwindow.cpp \
               pieview.cpp
 unix:!mac:!vxworks:!integrity:!haiku:LIBS += -lm

@@ -49,14 +49,20 @@
 ****************************************************************************/
 
 #include <QApplication>
+#include <QAccessible>
 
 #include "mainwindow.h"
+
+extern QAccessibleInterface* accessiblePieViewFactory(const QString &classname, QObject *object);
 
 int main(int argc, char *argv[])
 {
     Q_INIT_RESOURCE(chart);
 
     QApplication app(argc, argv);
+    QAccessible::installFactory(accessiblePieViewFactory);  // Without this line, the application
+                                                            // would crash every time we call
+                                                            // updateAccessibility() in pieview.cpp
     MainWindow window;
     window.show();
     return app.exec();

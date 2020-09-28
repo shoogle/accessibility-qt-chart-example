@@ -55,8 +55,38 @@
 PieView::PieView(QWidget *parent)
     : QAbstractItemView(parent)
 {
+    setAccessibleName("Pie View");
+    setAccessibleDescription("Pie chart with key");
     horizontalScrollBar()->setRange(0, 0);
     verticalScrollBar()->setRange(0, 0);
+    setTabKeyNavigation(true); // enable Tab and Backtab in `moveCursor()`
+}
+
+void PieView::currentChanged(const QModelIndex &current, const QModelIndex &previous)
+{
+    QAbstractItemView::currentChanged(current, previous);
+
+    if (!current.isValid())
+        return;
+
+#if defined(NDEBUG)
+    // Release build: only create events when screen reader is running.
+    // This improves performance and stability for most users.
+    if (QAccessible::isActive()) {
+#else
+    // Debug build: always create events (helps detect possible crashes).
+    {
+#endif
+        int child = current.row() * model()->columnCount() + current.column();
+        qDebug() << "Creating accessibility event for PieView: Focus child" << child;
+        QAccessibleEvent event(this, QAccessible::Focus);
+        event.setChild(child);
+        QAccessible::updateAccessibility(&event);
+        // Note: if crashes do happen, they are likely to occur in Qt or screen reader code that
+        // is outside our control. It might not be obvious that the crash was caused by our code,
+        // or even that is was related to accessibility, hence the need to print a debug
+        // statement before creating the event and calling updateAccessibility().
+    }
 }
 
 void PieView::dataChanged(const QModelIndex &topLeft,
@@ -201,7 +231,7 @@ QRect PieView::itemRect(const QModelIndex &index) const
                      totalSize - margin, qRound(itemHeight));
     }
     case 1:
-        return viewport()->rect();
+        return itemRegion(index).boundingRect();
     }
     return QRect();
 }
@@ -278,6 +308,9 @@ QModelIndex PieView::moveCursor(QAbstractItemView::CursorAction cursorAction,
 {
     QModelIndex current = currentIndex();
 
+    if (!current.isValid())
+        cursorAction = MoveHome;
+
     switch (cursorAction) {
         case MoveLeft:
         case MoveUp:
@@ -295,6 +328,22 @@ QModelIndex PieView::moveCursor(QAbstractItemView::CursorAction cursorAction,
             else
                 current = model()->index(rows(current) - 1, current.column(),
                                          rootIndex());
+            break;
+        case MoveHome:
+            current = model()->index(0, 1);
+            break;
+        case MoveEnd:
+            current = model()->index(rows(current) - 1, 0);
+            break;
+        case MovePageUp:
+            current = model()->index(0, current.column());
+            break;
+        case MovePageDown:
+            current = model()->index(rows(current) - 1, current.column());
+            break;
+        case MoveNext:      // Tab
+        case MovePrevious:  // Backtab
+            current = model()->index(current.row(), 1 - current.column());
             break;
         default:
             break;

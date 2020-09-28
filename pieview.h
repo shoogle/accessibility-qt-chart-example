@@ -64,8 +64,11 @@ public:
     QRect visualRect(const QModelIndex &index) const override;
     void scrollTo(const QModelIndex &index, ScrollHint hint = EnsureVisible) override;
     QModelIndex indexAt(const QPoint &point) const override;
+    double total() { return totalValue; }
 
 protected slots:
+    void currentChanged(const QModelIndex &current,
+                        const QModelIndex &previous) override;
     void dataChanged(const QModelIndex &topLeft, const QModelIndex &bottomRight,
                      const QVector<int> &roles = QVector<int>()) override;
     void rowsInserted(const QModelIndex &parent, int start, int end) override;
