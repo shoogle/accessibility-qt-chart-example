@@ -89,6 +89,35 @@ void PieView::currentChanged(const QModelIndex &current, const QModelIndex &prev
     }
 }
 
+void PieView::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+{
+    QAbstractItemView::selectionChanged(selected, deselected);
+
+#if defined(NDEBUG)
+    // Release build: only create events when screen reader is running.
+    // This improves performance and stability for most users.
+    if (QAccessible::isActive()) {
+#else
+    // Debug build: always create events (helps detect possible crashes).
+    {
+#endif
+        QModelIndex current = currentIndex();
+        bool currentSelected = selected.contains(current);
+
+        if (currentSelected || deselected.contains(current)) {
+            int child = current.row() * model()->columnCount() + current.column();
+            qDebug() << "Creating accessibility event for PieView:"
+                << (currentSelected ? "Selected" : "Deselected")
+                << "child" << child;
+            // Tried to use QAccessibleStateChangeEvent but it was ignored by screen readers.
+            QAccessibleEvent event(this,
+                currentSelected ? QAccessible::SelectionAdd : QAccessible::SelectionRemove);
+            event.setChild(child);
+            QAccessible::updateAccessibility(&event);
+        }
+    }
+}
+
 void PieView::dataChanged(const QModelIndex &topLeft,
                           const QModelIndex &bottomRight,
                           const QVector<int> &roles)
@@ -112,6 +141,32 @@ void PieView::dataChanged(const QModelIndex &topLeft,
         }
     }
     viewport()->update();
+
+#if defined(NDEBUG)
+    // Release build: only create events when screen reader is running.
+    // This improves performance and stability for most users.
+    if (QAccessible::isActive()) {
+#else
+    // Debug build: always create events (helps detect possible crashes).
+    {
+#endif
+        QModelIndex current = currentIndex();
+        if (current.isValid()
+                && current.parent() == topLeft.parent()
+                && current.parent() == bottomRight.parent()
+                && topLeft.row() <= current.row()
+                && current.row() <= bottomRight.row()
+                && topLeft.column() <= current.column()
+                && current.column() <= bottomRight.column()) {
+            // Data was changed for current index.
+            int child = current.row() * model()->columnCount() + current.column();
+            qDebug() << "Creating accessibility event for PieView: Updated child" << child;
+            QAccessibleEvent event(this, QAccessible::Focus); // Focus seems to be the only event
+                                                              // type that screen readers notice.
+            event.setChild(child);
+            QAccessible::updateAccessibility(&event);
+        }
+    }
 }
 
 bool PieView::edit(const QModelIndex &index, EditTrigger trigger, QEvent *event)
