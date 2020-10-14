@@ -31,6 +31,7 @@
 
 #include "accessiblepieview.h"
 
+#include "piemodel.h"
 #include "pieview.h"
 
 #define ROWS m_pieview->model()->rowCount()
@@ -44,11 +45,11 @@ QAccessibleInterface* accessiblePieViewFactory(const QString &classname, QObject
     return nullptr;
 }
 
-AccessiblePieItem::AccessiblePieItem(PieView* pv, int index)
+AccessiblePieItem::AccessiblePieItem(PieView* pv, QModelIndex index)
 : QAccessibleInterface()
 {
     m_pieview = pv;
-    m_index = pv->model()->index(index / COLS, index % COLS);
+    m_index = index;
 }
 
 QAccessibleInterface* AccessiblePieItem::child(int index) const
@@ -81,7 +82,9 @@ int AccessiblePieItem::indexOfChild(const QAccessibleInterface*) const
 
 bool AccessiblePieItem::isValid() const
 {
-    return m_pieview && m_index.isValid();
+    return m_pieview != nullptr
+        && m_index.isValid()
+        && m_index.data(AccessibleInterfaceRole).value<AccessiblePieItem*>() == this;
 }
 
 QString AccessiblePieItem::name() const
@@ -253,15 +256,30 @@ AccessiblePieView::AccessiblePieView(PieView* pv)
     m_pieview = pv;
 }
 
+QAccessibleInterface* AccessiblePieView::child(QModelIndex index) const
+{
+    Q_ASSERT(index.isValid() && index.model() == m_pieview->model());
+    auto iface = index.data(AccessibleInterfaceRole).value<AccessiblePieItem*>();
+    if (!iface) {
+        iface = new AccessiblePieItem(m_pieview, index);
+        m_pieview->model()->setData(index, QVariant::fromValue(iface), AccessibleInterfaceRole);
+        QAccessible::registerAccessibleInterface(iface);
+    }
+    return iface;
+}
+
 QAccessibleInterface* AccessiblePieView::child(int index) const
 {
-    return new AccessiblePieItem(m_pieview, index);
+    Q_ASSERT(0 <= index && index < childCount());
+    return child(m_pieview->model()->index(index / COLS, index % COLS));
 }
 
 QAccessibleInterface* AccessiblePieView::childAt(int x, int y) const
 {
-    auto idx = m_pieview->indexAt(m_pieview->mapFromGlobal(QPoint(x, y)));
-    return new AccessiblePieItem(m_pieview, (idx.row() * COLS) + idx.column());
+    QModelIndex index = m_pieview->indexAt(m_pieview->mapFromGlobal(QPoint(x, y)));
+    if (index.isValid())
+        return child(index);
+    return nullptr; // no child at (x,y)
 }
 
 int AccessiblePieView::childCount() const
@@ -271,12 +289,9 @@ int AccessiblePieView::childCount() const
 
 int AccessiblePieView::indexOfChild(const QAccessibleInterface* iface) const
 {
-    auto child = dynamic_cast<const AccessiblePieItem*>(iface);
-
-    if (child && child->isValid() && child->parent() == this)
-        return child->index();
-
-    return -1;
+    Q_ASSERT(iface && iface->isValid() && iface->parent() == this);
+    Q_ASSERT(dynamic_cast<const AccessiblePieItem*>(iface) != nullptr);
+    return static_cast<const AccessiblePieItem*>(iface)->index();
 }
 
 bool AccessiblePieView::isValid() const

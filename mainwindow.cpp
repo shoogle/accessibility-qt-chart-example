@@ -48,8 +48,10 @@
 **
 ****************************************************************************/
 
+#include "piemodel.h"
 #include "pieview.h"
 #include "mainwindow.h"
+#include "accessiblepieview.h"
 
 #include <QtWidgets>
 
@@ -82,7 +84,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 void MainWindow::setupModel()
 {
-    model = new QStandardItemModel(8, 2, this);
+    model = new PieModel(8, 2, this);
     model->setHeaderData(0, Qt::Horizontal, tr("Label"));
     model->setHeaderData(1, Qt::Horizontal, tr("Quantity"));
 }
@@ -90,8 +92,8 @@ void MainWindow::setupModel()
 void MainWindow::setupViews()
 {
     QSplitter *splitter = new QSplitter;
-    QTableView *table = new QTableView;
     pieChart = new PieView;
+    QTableView *table = new QTableView;
     splitter->addWidget(table);
     splitter->addWidget(pieChart);
     splitter->setStretchFactor(0, 0);
@@ -142,6 +144,7 @@ void MainWindow::loadFile(const QString &fileName)
             const QStringList pieces = line.split(QLatin1Char(','));
             if (pieces.size() < 3)
                 continue;
+
             model->setData(model->index(row, 0, QModelIndex()),
                            pieces.value(0));
             model->setData(model->index(row, 1, QModelIndex()),
@@ -150,7 +153,7 @@ void MainWindow::loadFile(const QString &fileName)
                            QColor(pieces.value(2)), Qt::DecorationRole);
             row++;
         }
-    };
+    }
 
     file.close();
     statusBar()->showMessage(tr("Loaded %1").arg(fileName), 2000);

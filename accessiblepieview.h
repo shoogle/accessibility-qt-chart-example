@@ -44,7 +44,7 @@ class AccessiblePieItem : public QAccessibleInterface
     friend class AccessiblePieView; // allow access to index()
 
 public:
-    AccessiblePieItem(PieView* pv, int index);
+    AccessiblePieItem(PieView* pv, QModelIndex index);
     QAccessibleInterface* child(int index) const override;
     QAccessibleInterface* childAt(int x, int y) const override;
     int childCount() const override;
@@ -65,6 +65,7 @@ private:
     QPersistentModelIndex m_index;
     PieView* m_pieview;
 };
+Q_DECLARE_METATYPE(AccessiblePieItem*); // enable storing in QVariant
 
 class AccessiblePieView : public QAccessibleInterface
 {
@@ -84,6 +85,7 @@ public:
     void setText(QAccessible::Text t, const QString &text) override;
 
 private:
+    QAccessibleInterface* child(QModelIndex index) const;
     PieView* m_pieview;
 };
 
