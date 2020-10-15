@@ -32,7 +32,7 @@
 #ifndef ACCESSIBLEPIEVIEW_H
 #define ACCESSIBLEPIEVIEW_H
 
-#include <QAccessibleInterface>
+#include <QAccessibleWidget>
 #include <QPersistentModelIndex>
 
 class PieView;
@@ -70,7 +70,7 @@ private:
 };
 Q_DECLARE_METATYPE(AccessiblePieItem*); // enable storing in QVariant
 
-class AccessiblePieView : public QAccessibleInterface
+class AccessiblePieView : public QAccessibleWidget
 {
 public:
     AccessiblePieView(PieView* pv);
@@ -81,9 +81,6 @@ public:
     int indexOfChild(const QAccessibleInterface* iface) const override;
     bool isValid() const override;
     QObject* object() const override;
-    QAccessibleInterface* parent() const override;
-    QRect rect() const override;
-    QAccessible::Role role() const override;
     QAccessible::State state() const override;
     QString text(QAccessible::Text t) const override;
     void setText(QAccessible::Text t, const QString &text) override;

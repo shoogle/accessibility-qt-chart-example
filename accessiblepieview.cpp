@@ -275,8 +275,18 @@ void AccessiblePieItem::setText(QAccessible::Text t, const QString &text)
 }
 
 AccessiblePieView::AccessiblePieView(PieView* pv)
-: QAccessibleInterface()
+: QAccessibleWidget(pv, QAccessible::List, pv->accessibleName())
+// We set role to QAccessible::List but other values are possible, see
+// https://doc.qt.io/qt-5/qaccessible.html#Role-enum. The aim for the role is
+// to give the user a hint about the kind of widget they are interacting with
+// (i.e. that it consists of multiple items). We tested likely roles with
+// various screen readers and found that the List role gives the best output.
+//   Linux: Table or Tree roles work just as well as the List role with Orca.
+//   macOS: Table and Tree are completely broken with VoiceOver.
+//   Windows: Table and Tree work for the view but the output for items is not
+//     ideal. See comments in `AccessiblePieItem::role()`.
 {
+    Q_ASSERT(pv);
     m_pieview = pv;
 }
 
@@ -292,6 +302,9 @@ QAccessibleInterface* AccessiblePieView::child(QModelIndex index) const
     return iface;
 }
 
+// QAccessibleWidget::child(int) only deals with widget children, so we must
+// override it to return items in the view instead (items are not widgets).
+// Same for other child-based functions like childAt(), focusChild(), etc.
 QAccessibleInterface* AccessiblePieView::child(int index) const
 {
     Q_ASSERT(0 <= index && index < childCount());
@@ -328,7 +341,9 @@ int AccessiblePieView::indexOfChild(const QAccessibleInterface* iface) const
 
 bool AccessiblePieView::isValid() const
 {
-    return m_pieview != nullptr;
+    if (!m_pieview)
+        return false;
+    return QAccessibleWidget::isValid();
 }
 
 QObject* AccessiblePieView::object() const
@@ -336,39 +351,21 @@ QObject* AccessiblePieView::object() const
     return m_pieview;
 }
 
-QAccessibleInterface* AccessiblePieView::parent() const
-{
-    return QAccessible::queryAccessibleInterface(m_pieview->parent());
-}
-
-QRect AccessiblePieView::rect() const
-{
-    return m_pieview->rect().translated(m_pieview->mapToGlobal(QPoint(0,0)));
-}
-
-QAccessible::Role AccessiblePieView::role() const
-{
-    // See https://doc.qt.io/qt-5/qaccessible.html#Role-enum
-    // We want the screen reader to give a hint about the kind of widget that
-    // the user is interacting with, i.e. that it consists of multiple items.
-    return QAccessible::List; // Good output on all platforms.
-    // Linux: We could also use the role Table or Tree here.
-    // macOS: Table and Tree are completely broken with VoiceOver.
-    // Windows: Table and Tree work for the view but the output for items is
-    //   not ideal. See comments in `AccessiblePieItem::role()`.
-}
-
 QAccessible::State AccessiblePieView::state() const
 {
-    QAccessible::State viewState;
-    // See https://doc.qt.io/qt-5/qaccessible-state.html for complete list of
-    // possible states and their meanings. Only a few of these will actually
-    // affect screen reader output, so we might not need to set all of them
-    // depending on the value we return for `role()`. Note that some states
-    // are not usable because they are commented-out in Qt source code. See
-    // https://github.com/qt/qtbase/blob/5.15/src/gui/accessible/qaccessible.h
+    // See https://doc.qt.io/qt-5/qaccessible-state.html for complete list of possible states and
+    // their meanings. Note that some states are not usable because they are commented-out in Qt
+    // source code. See https://github.com/qt/qtbase/blob/5.15/src/gui/accessible/qaccessible.h
 
-    viewState.active = true;
+    QAccessible::State viewState = QAccessibleWidget::state();
+
+    // QAccessibleWidget::state() has already set some states for us based on widget properties,
+    // see https://github.com/qt/qtbase/blob/5.15/src/widgets/accessible/qaccessiblewidget.cpp.
+    // Of the remaining states, only a few actually affect screen reader output. The ones that
+    // matter depend on the platform, screen reader, and the value we return for `role()`. Here
+    // we set all of them, but you can probably get away with just setting the likely ones.
+
+//  viewState.active; // set by QAccessibleWidget::state()
 //  viewState.adjustable; // commented-out in Qt source
     viewState.animated = false;
     viewState.busy = false;
@@ -382,17 +379,17 @@ QAccessible::State AccessiblePieView::state() const
     viewState.expandable = false;
     viewState.expanded = false;
     viewState.extSelectable = m_pieview->selectionMode() == QAbstractItemView::ExtendedSelection;
-    viewState.focusable = true;
-    viewState.focused = true;
+//  viewState.focusable = true; // set by QAccessibleWidget::state()
+//  viewState.focused = true; // set by QAccessibleWidget::state()
     viewState.hasPopup = false;
     viewState.hotTracked = false;
     viewState.invalid = false;
 //  viewState.invalidEntry; // commented-out in Qt source
-    viewState.invisible = false;
+//  viewState.invisible; // set by QAccessibleWidget::state()
     viewState.linked = false;
     viewState.marqueed = false;
     viewState.modal = false;
-    viewState.movable = false;
+//  viewState.movable = false; // set by QAccessibleWidget::state()
     viewState.multiLine = false;
     viewState.multiSelectable = m_pieview->selectionMode() == QAbstractItemView::MultiSelection;
     viewState.offscreen = false;
@@ -405,12 +402,12 @@ QAccessible::State AccessiblePieView::state() const
     viewState.selectableText = false;
     viewState.selected = true;
     viewState.selfVoicing = false;
-    viewState.sizeable = false;
+//  viewState.sizeable = false; // set by QAccessibleWidget::state()
 //  viewState.summaryElement; // commented-out in Qt source
     viewState.supportsAutoCompletion = false;
     viewState.traversed = false;
 //  viewState.updatesFrequently; // commented-out in Qt source
-    viewState.disabled = false;
+//  viewState.disabled = false; // set by QAccessibleWidget::state()
 
     return viewState;
 }
@@ -430,7 +427,7 @@ QString AccessiblePieView::text(QAccessible::Text t) const
     case QAccessible::Value:
     case QAccessible::Accelerator:
     default:
-        return QString();
+        return QAccessibleWidget::text(t);
     }
 }
 
