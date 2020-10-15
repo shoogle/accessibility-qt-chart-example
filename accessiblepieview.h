@@ -48,11 +48,14 @@ public:
     QAccessibleInterface* child(int index) const override;
     QAccessibleInterface* childAt(int x, int y) const override;
     int childCount() const override;
+    QAccessibleInterface* focusChild() const override;
     int indexOfChild(const QAccessibleInterface*) const override;
     bool isValid() const override;
     QObject* object() const override;
     QAccessibleInterface* parent() const override;
     QRect rect() const override;
+    QVector<QPair<QAccessibleInterface*, QAccessible::Relation>>
+        relations(QAccessible::Relation match = QAccessible::AllRelations) const override;
     QAccessible::Role role() const override;
     QAccessible::State state() const override;
     QString text(QAccessible::Text t) const override;
@@ -74,6 +77,7 @@ public:
     QAccessibleInterface* child(int index) const override;
     QAccessibleInterface* childAt(int x, int y) const override;
     int childCount() const override;
+    QAccessibleInterface* focusChild() const override;
     int indexOfChild(const QAccessibleInterface* iface) const override;
     bool isValid() const override;
     QObject* object() const override;

@@ -75,6 +75,13 @@ int AccessiblePieItem::index() const
     return m_index.row() * COLS + m_index.column();
 }
 
+QAccessibleInterface* AccessiblePieItem::focusChild() const
+{
+    if (m_index.isValid() && m_pieview->currentIndex() == m_index)
+        return const_cast<AccessiblePieItem*>(this);
+    return nullptr;
+}
+
 int AccessiblePieItem::indexOfChild(const QAccessibleInterface*) const
 {
     return -1;
@@ -139,6 +146,23 @@ QAccessibleInterface* AccessiblePieItem::parent() const
 QRect AccessiblePieItem::rect() const
 {
     return m_pieview->visualRect(m_index).translated(m_pieview->mapToGlobal(QPoint(0,0)));
+}
+
+// We probably don't need to implement this function. It is only done here for completeness.
+QVector<QPair<QAccessibleInterface*, QAccessible::Relation>>
+AccessiblePieItem::relations(QAccessible::Relation match) const
+{
+    QVector<QPair<QAccessibleInterface*, QAccessible::Relation>> rels;
+    if (m_index.column() == 0) {
+        // We are a category so return the slice of the pie that is labelled by us.
+        if (match & QAccessible::Labelled)
+            rels.append(qMakePair(parent()->child(index() + 1), QAccessible::Labelled));
+    } else {
+        // We are a slice of the pie so return the category that is our label.
+        if (match & QAccessible::Label)
+            rels.append(qMakePair(parent()->child(index() - 1), QAccessible::Label));
+    }
+    return rels;
 }
 
 QAccessible::Role AccessiblePieItem::role() const
@@ -285,6 +309,14 @@ QAccessibleInterface* AccessiblePieView::childAt(int x, int y) const
 int AccessiblePieView::childCount() const
 {
     return ROWS * COLS;
+}
+
+QAccessibleInterface* AccessiblePieView::focusChild() const
+{
+    QModelIndex current = m_pieview->currentIndex();
+    if (current.isValid())
+        return child(current);
+    return nullptr;
 }
 
 int AccessiblePieView::indexOfChild(const QAccessibleInterface* iface) const
